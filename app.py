@@ -29,7 +29,6 @@ def load_matieres():
         return pd.read_csv(MATIERES_FILE).fillna("")
     return pd.DataFrame(columns=["course_code","course_title","level_code","track_code","ec_type"])
 
-@st.cache_data
 def load_soumissions():
     if os.path.exists(SOUMISSIONS_FILE):
         return pd.read_csv(SOUMISSIONS_FILE).fillna("")
