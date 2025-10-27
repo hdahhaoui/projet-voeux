@@ -1,5 +1,3 @@
-# app.py — Plateforme de vœux enseignants (Département GC)
-
 import os
 from io import BytesIO
 from datetime import datetime
@@ -7,9 +5,7 @@ import zipfile
 import pandas as pd
 import streamlit as st
 
-# =======================
-# CONFIG
-# =======================
+
 st.set_page_config(page_title="Choix des matières - Département Génie Civil",
                    page_icon="🏗️", layout="wide")
 
@@ -20,9 +16,7 @@ ADMIN_PASS = os.getenv("ADMIN_PASS", "gc2025s2")  # mot de passe par défaut
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# =======================
-# HELPERS
-# =======================
+
 @st.cache_data
 def load_matieres():
     if os.path.exists(MATIERES_FILE):
@@ -64,20 +58,14 @@ def zip_csv_bytes(**sheets):
     bio.seek(0)
     return bio
 
-# =======================
-# DATA (cache)
-# =======================
+
 matieres_df = load_matieres()
 
-# =======================
-# SIDEBAR
-# =======================
+
 st.sidebar.header("Navigation")
 mode = st.sidebar.radio("Mode", ["Enseignant", "Admin"])
 
-# =========================================================
-# MODE ENSEIGNANT
-# =========================================================
+
 def page_enseignant():
     st.title("🎓 Plateforme de choix des matières")
     st.caption("Département de Génie Civil")
@@ -217,9 +205,7 @@ def page_enseignant():
                            file_name=f"choix_{nom}_{prenom}.csv",
                            mime="text/csv")
 
-# =========================================================
-# MODE ADMIN
-# =========================================================
+
 def page_admin():
     st.title("🛠️ Administration – Vœux enseignants")
 
@@ -284,9 +270,7 @@ def page_admin():
         st.download_button("⬇️ Export (ZIP de CSV – moteur Excel absent)", zipbuf.getvalue(),
                            file_name="voeux_admin_export.zip", mime="application/zip")
 
-# =======================
-# ROUTER
-# =======================
+
 if mode == "Enseignant":
     page_enseignant()
 else:
