@@ -165,7 +165,7 @@ if mode == "Enseignant":
 
     remarque = st.text_area(
         "📝 Recommandations / Remarques / Préférences EDT",
-        placeholder="Ex. : éviter lundi matin, binôme souhaité...",
+        placeholder="Ex. : éviter lundi matin, éviter 15h30-17h00...",
         height=120,
     )
 
