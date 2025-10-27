@@ -136,8 +136,21 @@ def page_enseignant():
     work = catalogue.rename(columns=affichage_cols).copy()
 
     # État persistant des priorités pour éviter les doubles clics dans la grille.
+    # Gestion d'état : on garde séparément la liste des codes sélectionnés pour éviter
+    # les doubles clics lorsque la table se rerend.
     priorites_state = st.session_state.setdefault("priorites", {})
-    work["Choisir"] = work["Code UE"].isin(priorites_state.keys())
+    selection_codes = st.session_state.setdefault("selection_codes", list(priorites_state.keys()))
+
+    # Nettoyage des sélections/priorités qui ne sont plus présentes dans le catalogue
+    # courant (ex. après un changement de filtre).
+    codes_disponibles = set(work["Code UE"].tolist())
+    selection_codes = [code for code in selection_codes if code in codes_disponibles]
+    priorites_state = {code: priorites_state.get(code, "") for code in selection_codes}
+
+    st.session_state["selection_codes"] = selection_codes
+    st.session_state["priorites"] = priorites_state
+
+    work["Choisir"] = work["Code UE"].isin(selection_codes)
     work["Priorité"] = work["Code UE"].map(priorites_state).fillna("")
 
     st.markdown(
@@ -234,8 +247,20 @@ def page_enseignant():
 
     selectionnees = edited[edited["Choisir"] == True].copy()
     codes_selectionnes = selectionnees["Code UE"].tolist()
-    # Nettoyage des priorités qui ne sont plus nécessaires
-    st.session_state["priorites"] = {code: priorites_state.get(code, "") for code in codes_selectionnes}
+
+    if codes_selectionnes != st.session_state.get("selection_codes", []):
+        st.session_state["selection_codes"] = codes_selectionnes
+
+    # Nettoyage des priorités qui ne sont plus nécessaires et synchronisation avec la
+    # nouvelle sélection.
+    priorites_state = st.session_state.get("priorites", {})
+    priorites_state = {code: priorites_state.get(code, "") for code in codes_selectionnes}
+    st.session_state["priorites"] = priorites_state
+
+    active_select_keys = {f"prio_{code}" for code in codes_selectionnes}
+    for key in list(st.session_state.keys()):
+        if key.startswith("prio_") and key not in active_select_keys:
+            del st.session_state[key]
 
     if not selectionnees.empty:
         st.markdown("#### 🎯 Priorisez vos matières sélectionnées")
