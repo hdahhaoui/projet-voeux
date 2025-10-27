@@ -119,8 +119,7 @@ def page_enseignant():
         st.info("Aucune matière trouvée avec ces critères.")
         return
 
-    st.subheader(f"📚 Catalogue filtré ({len(catalogue)})")
-    st.dataframe(catalogue, use_container_width=True, hide_index=True)
+    st.caption(f"{len(catalogue)} matières correspondent à vos filtres.")
 
     # Sélections & priorités (qualitatives)
     st.markdown("---")
