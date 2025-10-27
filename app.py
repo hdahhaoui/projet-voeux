@@ -148,7 +148,7 @@ def page_enseignant():
             "Priorité": st.column_config.SelectboxColumn(
                 "Priorité ▾",
                 options=liste_priorites,
-                placeholder="Cliquez pour ouvrir la liste et choisir",
+                required=False,
                 help="Choisissez votre niveau de préférence pour chaque matière sélectionnée.",
             ),
         },
