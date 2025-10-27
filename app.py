@@ -163,7 +163,7 @@ def page_enseignant():
     )
 
     remarque = st.text_area("📝 Recommandations / Remarques / Préférences EDT",
-                            placeholder="Ex. : éviter lundi matin ; binôme souhaité …", height=120)
+                            placeholder="Ex. : éviter lundi matin ; éviter 15h30-17h00 …", height=120)
 
     MIN_TOTAL = 8
     chosen = edited[edited["Choisir"] == True].copy()
