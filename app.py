@@ -1,3 +1,5 @@
+# app.py — Plateforme de vœux enseignants (Département GC)
+
 import os
 from io import BytesIO
 from datetime import datetime
@@ -119,92 +121,16 @@ def page_enseignant():
         st.info("Aucune matière trouvée avec ces critères.")
         return
 
-    st.caption(f"{len(catalogue)} matières correspondent à vos filtres.")
+    st.subheader(f"📚 Catalogue filtré ({len(catalogue)})")
+    st.dataframe(catalogue, use_container_width=True, hide_index=True)
 
     # Sélections & priorités (qualitatives)
     st.markdown("---")
     st.subheader("✅ Sélection & priorités")
 
-    # Mise en forme de la grille : on garde un identifiant pour piloter les priorités.
-    affichage_cols = {
-        "course_code": "Code UE",
-        "course_title": "Matière",
-        "level_code": "Niveau",
-        "track_code": "Parcours",
-        "ec_type": "Type d'EC",
-    }
-    work = catalogue.rename(columns=affichage_cols).copy()
-
-    # État persistant des priorités pour éviter les doubles clics dans la grille.
-    # Gestion d'état : on garde séparément la liste des codes sélectionnés pour éviter
-    # les doubles clics lorsque la table se rerend.
-    priorites_state = st.session_state.setdefault("priorites", {})
-    selection_codes = st.session_state.setdefault("selection_codes", list(priorites_state.keys()))
-
-    # Nettoyage des sélections/priorités qui ne sont plus présentes dans le catalogue
-    # courant (ex. après un changement de filtre).
-    codes_disponibles = set(work["Code UE"].tolist())
-    selection_codes = [code for code in selection_codes if code in codes_disponibles]
-    priorites_state = {code: priorites_state.get(code, "") for code in selection_codes}
-
-    st.session_state["selection_codes"] = selection_codes
-    st.session_state["priorites"] = priorites_state
-
-    work["Choisir"] = work["Code UE"].isin(selection_codes)
-    work["Priorité"] = work["Code UE"].map(priorites_state).fillna("")
-
-    st.markdown(
-        """
-        <style>
-        /* Scrollbar plus visible et capsule d'indication pour la grille des matières */
-        div[data-testid="stDataFrame"] div[data-testid="stDataFrameScrollableContainer"],
-        div[data-testid="stDataFrame"] div[data-testid="StyledDataFrameContainer"] {
-            scrollbar-width: thin;
-            scrollbar-color: #4f46e5 #ede9fe;
-            border-radius: 14px;
-            box-shadow: inset 0 0 0 1px #e2e8f0;
-        }
-        div[data-testid="stDataFrame"] div[data-testid="stDataFrameScrollableContainer"]::-webkit-scrollbar,
-        div[data-testid="stDataFrame"] div[data-testid="StyledDataFrameContainer"]::-webkit-scrollbar {
-            width: 12px;
-        }
-        div[data-testid="stDataFrame"] div[data-testid="stDataFrameScrollableContainer"]::-webkit-scrollbar-thumb,
-        div[data-testid="stDataFrame"] div[data-testid="StyledDataFrameContainer"]::-webkit-scrollbar-thumb {
-            background-color: #4f46e5;
-            border-radius: 999px;
-            border: 3px solid #ede9fe;
-        }
-        div[data-testid="stDataFrame"] div[data-testid="stDataFrameScrollableContainer"]::-webkit-scrollbar-track,
-        div[data-testid="stDataFrame"] div[data-testid="StyledDataFrameContainer"]::-webkit-scrollbar-track {
-            background-color: #f5f3ff;
-            border-radius: 999px;
-        }
-        div[data-testid="stDataFrame"] div[data-testid="stDataFrameScrollableContainer"]::after,
-        div[data-testid="stDataFrame"] div[data-testid="StyledDataFrameContainer"]::after {
-            content: "⬇️ Faites défiler pour découvrir toutes les matières";
-            position: sticky;
-            bottom: 8px;
-            right: 16px;
-            display: inline-flex;
-            background: rgba(79, 70, 229, 0.92);
-            color: white;
-            font-size: 0.75rem;
-            font-weight: 500;
-            padding: 4px 14px;
-            border-radius: 999px;
-            box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
-            pointer-events: none;
-            z-index: 5;
-        }
-        /* Mise en valeur du titre de colonne Priorité */
-        div[data-testid="stDataFrame"] thead th:last-child {
-            background: #eef2ff;
-            color: #312e81;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    work = catalogue.copy()
+    work["Choisir"] = False
+    work["Priorité"] = ""
 
     liste_priorites = [
         "🌟 Fortement souhaité",
@@ -218,83 +144,18 @@ def page_enseignant():
         use_container_width=True,
         hide_index=True,
         num_rows="fixed",
-        key="table_matieres",
         column_config={
-            "Code UE": st.column_config.TextColumn("Code", help="Identifiant de la matière"),
-            "Matière": st.column_config.TextColumn("Matière"),
-            "Niveau": st.column_config.TextColumn("Niveau"),
-            "Parcours": st.column_config.TextColumn("Parcours"),
-            "Type d'EC": st.column_config.TextColumn("Type d'EC"),
             "Choisir": st.column_config.CheckboxColumn("Choisir"),
-            "Priorité": st.column_config.TextColumn(
-                "Priorité",
-                help="La priorité se choisit dans le panneau ci-dessous pour un clic unique.",
-                disabled=True,
-            ),
+            "Priorité": st.column_config.SelectboxColumn("Priorité", options=liste_priorites,
+                         help="Choisissez votre niveau de préférence pour chaque matière sélectionnée."),
         },
     )
-
-    st.markdown(
-        """
-        <div style="display:flex;gap:0.75rem;align-items:center;margin:0.5rem 0 1.25rem;">
-            <span style="font-size:1.2rem;">💡</span>
-            <span style="font-size:0.95rem;">Sélectionnez vos matières dans la colonne <strong>Choisir</strong>,
-            puis attribuez leur priorité via le panneau coloré juste en dessous (un simple clic suffit).</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    selectionnees = edited[edited["Choisir"] == True].copy()
-    codes_selectionnes = selectionnees["Code UE"].tolist()
-
-    if codes_selectionnes != st.session_state.get("selection_codes", []):
-        st.session_state["selection_codes"] = codes_selectionnes
-
-    # Nettoyage des priorités qui ne sont plus nécessaires et synchronisation avec la
-    # nouvelle sélection.
-    priorites_state = st.session_state.get("priorites", {})
-    priorites_state = {code: priorites_state.get(code, "") for code in codes_selectionnes}
-    st.session_state["priorites"] = priorites_state
-
-    active_select_keys = {f"prio_{code}" for code in codes_selectionnes}
-    for key in list(st.session_state.keys()):
-        if key.startswith("prio_") and key not in active_select_keys:
-            del st.session_state[key]
-
-    if not selectionnees.empty:
-        st.markdown("#### 🎯 Priorisez vos matières sélectionnées")
-        with st.container(border=True):
-            for _, ligne in selectionnees.iterrows():
-                code = ligne["Code UE"]
-                nom = ligne["Matière"]
-                niveau = ligne["Niveau"]
-                parcours = ligne["Parcours"]
-                etiquette = f"{nom} — {niveau} / {parcours}"
-                valeur_actuelle = st.session_state["priorites"].get(code, "")
-                choix = st.selectbox(
-                    etiquette,
-                    options=[""] + liste_priorites,
-                    index=([""] + liste_priorites).index(valeur_actuelle) if valeur_actuelle in liste_priorites else 0,
-                    key=f"prio_{code}",
-                    help="Choisissez la priorité sans double clic",
-                )
-                st.session_state["priorites"][code] = choix
-        selectionnees["Priorité"] = selectionnees["Code UE"].map(st.session_state["priorites"]).fillna("")
-    else:
-        st.info("Cochez une matière pour activer le choix de priorité.")
-
-    # Reprojection des noms de colonnes d'origine pour la suite des validations
-    inverse_cols = {v: k for k, v in affichage_cols.items()}
-    selectionnees = selectionnees.rename(columns=inverse_cols) if not selectionnees.empty else selectionnees
 
     remarque = st.text_area("📝 Recommandations / Remarques / Préférences EDT",
                             placeholder="Ex. : éviter lundi matin ; éviter 15h30-17h00 …", height=120)
 
     MIN_TOTAL = 8
-    chosen = selectionnees.copy()
-    if "Choisir" in chosen.columns:
-        chosen = chosen.drop(columns=["Choisir"])
+    chosen = edited[edited["Choisir"] == True].copy()
     erreurs = []
 
     if len(chosen) < MIN_TOTAL:
@@ -309,7 +170,7 @@ def page_enseignant():
         erreurs.append("Parcours sans choix : " + ", ".join([f"**{t}**" for t in manquants_track]) + " (min. 1 par parcours).")
 
     if not chosen.empty and (chosen["Priorité"] == "").any():
-        erreurs.append("Choisissez une **priorité** dans le panneau dédié pour chaque matière sélectionnée.")
+        erreurs.append("Choisissez une **priorité** dans la liste déroulante pour chaque matière sélectionnée.")
 
     if st.button("💾 Enregistrer mes choix", type="primary"):
         if not nom.strip() or not prenom.strip():
@@ -411,8 +272,11 @@ def page_admin():
         st.download_button("⬇️ Export (ZIP de CSV – moteur Excel absent)", zipbuf.getvalue(),
                            file_name="voeux_admin_export.zip", mime="application/zip")
 
-
+# =======================
+# ROUTER
+# =======================
 if mode == "Enseignant":
     page_enseignant()
 else:
     page_admin()
+
