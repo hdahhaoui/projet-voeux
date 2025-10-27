@@ -148,20 +148,96 @@ if mode == "Enseignant":
     st.markdown("---")
     st.subheader("✅ Sélection & priorités")
 
-    work = filtré.copy()
-    work["Choisir"] = False
-    work["Priorité"] = None
+work = filtré.copy()
+work["Choisir"] = False
+work["Priorité"] = ""
 
-    edited = st.data_editor(
-        work,
-        use_container_width=True,
-        hide_index=True,
-        num_rows="fixed",
-        column_config={
-            "Choisir": st.column_config.CheckboxColumn("Choisir"),
-            "Priorité": st.column_config.NumberColumn("Priorité", min_value=1, step=1),
-        },
+# Définition de la liste déroulante qualitative
+liste_priorites = [
+    "🌟 Fortement souhaité",
+    "👍 Souhaité",
+    "🧩 Je prends le défi",
+    "⚙️ Disponible si besoin",
+]
+
+edited = st.data_editor(
+    work,
+    use_container_width=True,
+    hide_index=True,
+    num_rows="fixed",
+    column_config={
+        "Choisir": st.column_config.CheckboxColumn("Choisir"),
+        "Priorité": st.column_config.SelectboxColumn(
+            "Priorité",
+            options=liste_priorites,
+            help="Choisissez le niveau de préférence pour chaque matière sélectionnée.",
+        ),
+    },
+)
+
+remarque = st.text_area(
+    "📝 Recommandations / Remarques / Préférences EDT",
+    placeholder="Ex. : éviter lundi matin, binôme souhaité...",
+    height=120,
+)
+
+MIN_TOTAL = 8
+chosen = edited[edited["Choisir"] == True].copy()
+erreurs = []
+
+# Vérifications
+if len(chosen) < MIN_TOTAL:
+    erreurs.append(f"Vous devez choisir au moins **{MIN_TOTAL} matières** (actuellement {len(chosen)}).")
+
+# Par niveau
+manquants_niv = [lvl for lvl in niveaux_sel if lvl not in chosen["level_code"].unique()]
+if manquants_niv:
+    erreurs.append("Niveaux sans choix : " + ", ".join([f"**{m}**" for m in manquants_niv]) + " (min. 1 par niveau).")
+
+# Par parcours
+manquants_track = [t for t in parcours_sel if t not in chosen["track_code"].unique()]
+if manquants_track:
+    erreurs.append("Parcours sans choix : " + ", ".join([f"**{t}**" for t in manquants_track]) + " (min. 1 par parcours).")
+
+# Vérif que chaque matière choisie a une priorité
+if not chosen.empty:
+    if (chosen["Priorité"] == "").any():
+        erreurs.append("Choisissez une priorité dans la liste déroulante pour chaque matière sélectionnée.")
+
+if st.button("💾 Enregistrer mes choix", type="primary"):
+    if not nom.strip() or not prenom.strip():
+        st.error("Veuillez renseigner votre nom et prénom.")
+        st.stop()
+    if erreurs:
+        st.error("⚠️ Corrigez les erreurs suivantes :\n- " + "\n- ".join(erreurs))
+        st.stop()
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    lignes = []
+    chosen = chosen.sort_values("Priorité")
+    for _, r in chosen.iterrows():
+        lignes.append({
+            "nom": nom,
+            "prenom": prenom,
+            "email": email,
+            "niveau": r["level_code"],
+            "parcours": r["track_code"],
+            "matiere": r["course_title"],
+            "priorite": r["Priorité"],
+            "remarques": remarque,
+            "date_soumission": now,
+        })
+    df_new = pd.DataFrame(lignes)
+    save_soumissions(df_new)
+
+    st.success("✅ Vos choix ont été enregistrés avec succès.")
+    st.download_button(
+        "📥 Télécharger mon récapitulatif (CSV)",
+        data=df_new.to_csv(index=False).encode("utf-8"),
+        file_name=f"choix_{nom}_{prenom}.csv",
+        mime="text/csv",
     )
+
 
     remarque = st.text_area(
         "📝 Recommandations / Remarques / Préférences EDT",
