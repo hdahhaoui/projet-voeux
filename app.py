@@ -193,4 +193,93 @@ if mode == "Enseignant":
             erreurs.append("Renseignez une priorité pour chaque matière sélectionnée.")
         else:
             prios = chosen["Priorité"].astype(int).tolist()
-            if len(set(prios)) !=
+            if len(set(prios)) != len(prios):
+                erreurs.append("Les priorités doivent être **uniques** (1, 2, 3, …).")
+
+    if st.button("💾 Enregistrer mes choix", type="primary"):
+        if not nom.strip() or not prenom.strip():
+            st.error("Veuillez renseigner votre nom et prénom.")
+            st.stop()
+        if erreurs:
+            st.error("⚠️ Corrigez les erreurs suivantes :\n- " + "\n- ".join(erreurs))
+            st.stop()
+
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        lignes = []
+        chosen = chosen.sort_values("Priorité")
+        for _, r in chosen.iterrows():
+            lignes.append({
+                "nom": nom,
+                "prenom": prenom,
+                "email": email,
+                "niveau": r["level_code"],
+                "parcours": r["track_code"],
+                "matiere": r["course_title"],
+                "priorite": int(r["Priorité"]),
+                "remarques": remarque,
+                "date_soumission": now,
+            })
+        df_new = pd.DataFrame(lignes)
+        save_soumissions(df_new)
+
+        st.success("✅ Vos choix ont été enregistrés avec succès.")
+        st.download_button(
+            "📥 Télécharger mon récapitulatif (CSV)",
+            data=df_new.to_csv(index=False).encode("utf-8"),
+            file_name=f"choix_{nom}_{prenom}.csv",
+            mime="text/csv",
+        )
+
+# =======================
+# MODE ADMIN
+# =======================
+else:
+    st.title("🛠️ Administration – Vœux enseignants")
+    if ADMIN_PASS:
+        code = st.text_input("Code admin", type="password")
+        if code != ADMIN_PASS:
+            st.info("Entrez le code admin pour accéder aux données.")
+            st.stop()
+
+    df = load_soumissions()
+    if df.empty:
+        st.warning("Aucune soumission pour l'instant.")
+        st.stop()
+
+    f1, f2, f3 = st.columns(3)
+    with f1:
+        sel_niv = st.multiselect("Niveaux", sorted(df["niveau"].dropna().unique().tolist()))
+    with f2:
+        sel_par = st.multiselect("Parcours", sorted(df["parcours"].dropna().unique().tolist()))
+    with f3:
+        enseignants_list = (df["nom"].fillna("") + " " + df["prenom"].fillna("")).str.strip()
+        sel_prof = st.multiselect("Enseignants", sorted(enseignants_list.unique().tolist()))
+
+    filtered = df.copy()
+    if sel_niv: filtered = filtered[filtered["niveau"].isin(sel_niv)]
+    if sel_par: filtered = filtered[filtered["parcours"].isin(sel_par)]
+    if sel_prof:
+        full = (filtered["nom"].fillna("") + " " + filtered["prenom"].fillna("")).str.strip().isin(sel_prof)
+        filtered = filtered[full]
+
+    st.subheader(f"📋 Soumissions ({len(filtered)})")
+    st.dataframe(filtered.sort_values(["date_soumission","priorite"], ascending=[False, True]), use_container_width=True, hide_index=True)
+
+    st.subheader("📊 Synthèses")
+    cA, cB, cC = st.columns(3)
+    with cA:
+        agg_niv = filtered.groupby("niveau").size().reset_index(name="nb_voeux")
+        st.caption("Par niveau"); st.dataframe(agg_niv, use_container_width=True, hide_index=True)
+    with cB:
+        agg_mat = filtered.groupby("matiere").size().reset_index(name="nb_voeux").sort_values("nb_voeux", ascending=False)
+        st.caption("Top matières"); st.dataframe(agg_mat, use_container_width=True, hide_index=True)
+    with cC:
+        agg_prof = filtered.assign(enseignant=(filtered["nom"] + " " + filtered["prenom"]).str.strip()) \
+                           .groupby("enseignant").size().reset_index(name="nb_voeux") \
+                           .sort_values("nb_voeux", ascending=False)
+        st.caption("Par enseignant"); st.dataframe(agg_prof, use_container_width=True, hide_index=True)
+
+    xls = to_excel_bytes(Soumissions=filtered, Par_niveau=agg_niv, Top_matieres=agg_mat)
+    st.download_button("⬇️ Export Excel complet", xls.getvalue(),
+                       file_name="voeux_admin_export.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
