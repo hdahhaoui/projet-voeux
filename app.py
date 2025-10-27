@@ -126,6 +126,8 @@ def page_enseignant():
     st.subheader("✅ Sélection & priorités")
 
     work = catalogue.copy()
+    if "course_code" in work.columns:
+        work = work.drop(columns=["course_code"])
     work["Choisir"] = False
     work["Priorité"] = ""
 
@@ -143,8 +145,12 @@ def page_enseignant():
         num_rows="fixed",
         column_config={
             "Choisir": st.column_config.CheckboxColumn("Choisir"),
-            "Priorité": st.column_config.SelectboxColumn("Priorité", options=liste_priorites,
-                         help="Choisissez votre niveau de préférence pour chaque matière sélectionnée."),
+            "Priorité": st.column_config.SelectboxColumn(
+                "Priorité ▾",
+                options=liste_priorites,
+                placeholder="Cliquez pour ouvrir la liste et choisir",
+                help="Choisissez votre niveau de préférence pour chaque matière sélectionnée.",
+            ),
         },
     )
 
