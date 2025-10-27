@@ -25,7 +25,7 @@ st.set_page_config(
 DATA_DIR = os.getenv("DATA_PATH", "data")
 MATIERES_FILE = os.path.join(DATA_DIR, "matieres_all.csv")
 SOUMISSIONS_FILE = os.path.join(DATA_DIR, "soumissions.csv")
-ADMIN_PASS = os.getenv("ADMIN_PASS", "")  # mot de passe admin (optionnel)
+ADMIN_PASS = os.getenv("ADMIN_PASS", "gc2025s2")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
