@@ -63,12 +63,13 @@ st.sidebar.header("Navigation")
 mode = st.sidebar.radio("Mode", ["Enseignant", "Admin"])
 
 # =======================
-# MODE ENSEIGNANT
+# MODE ENSEIGNANT (NOUVELLE VERSION MULTI-NIVEAUX)
 # =======================
 if mode == "Enseignant":
     st.title("🎓 Plateforme de choix des matières")
     st.caption("Département de Génie Civil")
 
+    # --- Identité ---
     st.header("👩‍🏫 Informations personnelles")
     c1, c2 = st.columns(2)
     with c1:
@@ -83,126 +84,119 @@ if mode == "Enseignant":
         st.warning("⚠️ `data/matieres_all.csv` est introuvable ou vide.")
         st.stop()
 
-    niveaux = sorted(matieres_df["level_code"].dropna().unique().tolist())
-    niveau_choisi = st.selectbox("📘 Niveau", [""] + niveaux)
+    # --- Filtres multi-niveaux / multi-parcours ---
+    st.subheader("🎚️ Filtres d'affichage")
+    niveaux_all = sorted(matieres_df["level_code"].dropna().unique().tolist())
+    niveaux_sel = st.multiselect("📘 Niveaux à inclure (1 matière min. par niveau exigée)",
+                                 options=niveaux_all, default=niveaux_all)
 
-    choix, priorites = [], {}
-    remarque = ""
+    # Parcours proposés = ceux présents dans les niveaux choisis
+    parcours_all = sorted(
+        matieres_df[matieres_df["level_code"].isin(niveaux_sel)]["track_code"].dropna().unique().tolist()
+    )
+    parcours_sel = st.multiselect("🎯 Parcours à inclure", options=parcours_all, default=parcours_all)
 
-    if niveau_choisi:
-        parcours = sorted(matieres_df.query("level_code == @niveau_choisi")["track_code"].dropna().unique().tolist())
-        parcours_choisi = st.selectbox("🎯 Parcours", [""] + parcours)
+    # Types d'EC (optionnel)
+    ec_types_all = sorted(matieres_df["ec_type"].dropna().unique().tolist())
+    ec_types_sel = st.multiselect("🧩 Types d'EC (facultatif)", options=ec_types_all, default=ec_types_all)
 
-        if parcours_choisi:
-            sub = matieres_df.query("level_code == @niveau_choisi and track_code == @parcours_choisi")
-            st.subheader(f"Matières disponibles ({len(sub)})")
-            if len(sub) > 0:
-                choix = st.multiselect("Sélectionnez vos matières (≥ 8 au total sur tous niveaux confondus) :",
-                                       options=sub["course_title"].tolist())
-                for c in choix:
-                    priorites[c] = st.number_input(f"Priorité pour **{c}**", min_value=1, step=1, key=f"prio_{c}")
+    # Dataset filtré global (multi-niveaux)
+    filtré = matieres_df[
+        matieres_df["level_code"].isin(niveaux_sel)
+        & matieres_df["track_code"].isin(parcours_sel)
+        & matieres_df["ec_type"].isin(ec_types_sel)
+    ][["course_code", "course_title", "level_code", "track_code", "ec_type"]].copy()
 
-                remarque = st.text_area("📝 Recommandations / Remarques / Préférences EDT")
-
-    if st.button("💾 Enregistrer mes choix", type="primary"):
-        if not nom.strip() or not prenom.strip():
-            st.error("Veuillez renseigner votre nom et prénom.")
-        elif len(choix) < 8:
-            st.error("Vous devez sélectionner **au moins 8 matières**.")
-        elif len(priorites) != len(set(priorites.values())):
-            st.error("Les **priorités doivent être uniques** (1,2,3,…).")
-        else:
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            new_rows = []
-            for mat in choix:
-                new_rows.append({
-                    "nom": nom,
-                    "prenom": prenom,
-                    "email": email,
-                    "niveau": niveau_choisi,
-                    "parcours": parcours_choisi,
-                    "matiere": mat,
-                    "priorite": priorites.get(mat, ""),
-                    "remarques": remarque,
-                    "date_soumission": now,
-                })
-            df_new = pd.DataFrame(new_rows)
-            save_soumissions(df_new)
-
-            st.success("✅ Vos choix ont été enregistrés.")
-            st.download_button(
-                "📥 Télécharger mon récapitulatif (CSV)",
-                df_new.to_csv(index=False).encode("utf-8"),
-                file_name=f"choix_{nom}_{prenom}.csv",
-                mime="text/csv",
-            )
-
-# =======================
-# MODE ADMIN
-# =======================
-else:
-    st.title("🛠️ Administration – Vœux enseignants")
-
-    # Protection simple par code
-    if ADMIN_PASS:
-        code = st.text_input("Code admin", type="password")
-        if code != ADMIN_PASS:
-            st.info("Entrez le code admin pour accéder aux données.")
-            st.stop()
-
-    df = load_soumissions()
-
-    if df.empty:
-        st.warning("Aucune soumission pour l'instant.")
+    if filtré.empty:
+        st.info("Aucune matière pour ce filtre.")
         st.stop()
 
-    # Filtres
-    f1, f2, f3 = st.columns(3)
-    with f1:
-        sel_niv = st.multiselect("Niveaux", sorted(df["niveau"].dropna().unique().tolist()))
-    with f2:
-        sel_par = st.multiselect("Parcours", sorted(df["parcours"].dropna().unique().tolist()))
-    with f3:
-        sel_prof = st.multiselect("Enseignants", sorted((df["nom"] + " " + df["prenom"]).unique().tolist()))
+    st.subheader(f"📚 Catalogue filtré ({len(filtré)})")
+    st.dataframe(filtré, use_container_width=True, hide_index=True)
 
-    filtered = df.copy()
-    if sel_niv: filtered = filtered[filtered["niveau"].isin(sel_niv)]
-    if sel_par: filtered = filtered[filtered["parcours"].isin(sel_par)]
-    if sel_prof and "nom" in df.columns and "prenom" in df.columns:
-        full = (filtered["nom"] + " " + filtered["prenom"]).isin(sel_prof)
-        filtered = filtered[full]
+    st.markdown("---")
+    st.subheader("✅ Sélection & priorités")
 
-    st.subheader(f"📋 Soumissions ({len(filtered)})")
-    st.dataframe(filtered.sort_values(["date_soumission","priorite"], ascending=[False, True]),
-                 use_container_width=True, hide_index=True)
+    # Tableau éditable avec case à cocher + priorité
+    work = filtré.copy()
+    work["Choisir"] = False
+    work["Priorité"] = None
 
-    # Agrégats
-    st.subheader("📊 Synthèses")
-    cA, cB, cC = st.columns(3)
-    with cA:
-        agg_niv = filtered.groupby("niveau").size().reset_index(name="nb_lignes")
-        st.caption("Par niveau")
-        st.dataframe(agg_niv, use_container_width=True, hide_index=True)
-    with cB:
-        agg_mat = filtered.groupby("matiere").size().reset_index(name="nb_voeux").sort_values("nb_voeux", ascending=False)
-        st.caption("Top matières")
-        st.dataframe(agg_mat, use_container_width=True, hide_index=True)
-    with cC:
-        if {"nom","prenom"}.issubset(filtered.columns):
-            agg_prof = filtered.assign(enseignant=filtered["nom"]+" "+filtered["prenom"])\
-                               .groupby("enseignant").size().reset_index(name="nb_lignes")\
-                               .sort_values("nb_lignes", ascending=False)
-            st.caption("Par enseignant")
-            st.dataframe(agg_prof, use_container_width=True, hide_index=True)
-
-    # Export Excel multi-feuilles
-    st.subheader("📤 Export")
-    xls = to_excel_bytes(
-        Soumissions=filtered.sort_values(["date_soumission","priorite"], ascending=[False, True]),
-        Par_niveau=agg_niv,
-        Top_matieres=agg_mat,
+    edited = st.data_editor(
+        work,
+        use_container_width=True,
+        hide_index=True,
+        num_rows="fixed",
+        column_config={
+            "Choisir": st.column_config.CheckboxColumn("Choisir"),
+            "Priorité": st.column_config.NumberColumn(
+                "Priorité", min_value=1, step=1,
+                help="Classement 1 = priorité maximale. Les priorités doivent être uniques."
+            ),
+        },
     )
-    st.download_button("⬇️ Export Excel (toutes vues)", xls.getvalue(), file_name="voeux_admin_export.xlsx",
-                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    st.caption("Astuce : définis la variable d’environnement **ADMIN_PASS** sur Render pour protéger l’accès.")
+    # Remarques EDT
+    remarque = st.text_area(
+        "📝 Recommandations / Remarques / Préférences EDT",
+        placeholder="Ex. : éviter lundi matin ; préférence TD L3 ; binôme souhaité…",
+        height=120,
+    )
+
+    MIN_TOTAL = 8  # règle globale
+
+    # --- Validation ---
+    chosen = edited[edited["Choisir"] == True].copy()
+    erreurs = []
+
+    # total ≥ 8
+    if len(chosen) < MIN_TOTAL:
+        erreurs.append(f"Vous devez choisir au moins **{MIN_TOTAL} matières** (actuellement {len(chosen)}).")
+
+    # ≥ 1 par niveau sélectionné
+    for lvl in niveaux_sel:
+        if lvl not in chosen["level_code"].unique():
+            erreurs.append(f"Aucune matière sélectionnée pour le niveau **{lvl}** (min. 1 requise).")
+
+    # priorités renseignées et uniques
+    if not chosen["Priorité"].notna().all():
+        erreurs.append("Renseignez une **priorité** pour chaque matière sélectionnée.")
+    else:
+        prios = chosen["Priorité"].astype(int).tolist()
+        if len(set(prios)) != len(prios):
+            erreurs.append("Les **priorités doivent être uniques** (1, 2, 3, …).")
+
+    # --- Enregistrement ---
+    if st.button("💾 Enregistrer mes choix", type="primary"):
+        if not nom.strip() or not prenom.strip():
+            st.error("Veuillez renseigner votre nom et votre prénom.")
+            st.stop()
+        if erreurs:
+            st.error("Veuillez corriger :\n- " + "\n- ".join(erreurs))
+            st.stop()
+
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        lignes = []
+        chosen = chosen.sort_values("Priorité")
+        for _, r in chosen.iterrows():
+            lignes.append({
+                "nom": nom,
+                "prenom": prenom,
+                "email": email,
+                "niveau": r["level_code"],
+                "parcours": r["track_code"],
+                "matiere": r["course_title"],
+                "priorite": int(r["Priorité"]),
+                "remarques": remarque,
+                "date_soumission": now,
+            })
+        df_new = pd.DataFrame(lignes)
+        save_soumissions(df_new)
+
+        st.success("✅ Vos choix ont été enregistrés.")
+        st.download_button(
+            "📥 Télécharger mon récapitulatif (CSV)",
+            data=df_new.to_csv(index=False).encode("utf-8"),
+            file_name=f"choix_{nom}_{prenom}.csv",
+            mime="text/csv",
+        )
