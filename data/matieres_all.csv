@@ -1,0 +1,77 @@
+course_code,course_title,level_code,track_code,ec_type,ects,coeff,weekly_hours,evaluation
+L2GC.2.3,Analyse complexe (math4),L2,Génie Civil,UEF,4,2.0,3h00,40%/60%
+L2GC.2.7,DAO (Dessin Assisté par Ordinateur),L2,Génie Civil,UEM,2,1.0,1h30,100%
+L2GC.2.5,Géologie,L2,Génie Civil,UED,2,1.0,1h30,100%
+L2GC.2.5,Topographie 1,L2,Génie Civil,UED,2,1.0,1h30,100%
+L2GC.2.2,Matériaux de construction,L2,Génie Civil,UEF,2,1.0,1h30,100%
+L2GC.2.1,Mécanique des sols,L2,Génie Civil,UEF,4,2.0,3h00,40%/60%
+L2GC.2.6,Méthodes numériques,L2,Génie Civil,UEM,5,3.0,4h30,40%/60%
+L2GC.2.4,Résistance des matériaux,L2,Génie Civil,UEF,4,2.0,3h00,40%/60%
+L2GC.2.8,TP MDS & MDC,L2,Génie Civil,UEM,3,2.0,3h00,100%
+L2GC.2.10,TP MDF & RDM,L2,Génie Civil,UEM,3,2.0,1h00,100%
+L2GC.2.9,Techniques de communication,L2,Génie Civil,UET,2,2.0,3h00,40%/60%
+L3S6-BA2,Béton Armé 2,L3,Génie Civil,UEF,6,,3h00,
+L3S6-CAO,Calcul assisté par ordinateur,L3,Génie Civil,UEM,3,,3h00,
+L3S6-CDS,Calcul des Structures,L3,Génie Civil,UEF,4,,1h30,
+L3S6-CMET,Constructions Métalliques,L3,Génie Civil,UEF,4,,1h30,
+L3S6-ENT,Entrepreneuriat et start-up,L3,Génie Civil,UET,1,,1h30,
+L3S6-FOG,Fondations et ouvrages Géotechniques,L3,Génie Civil,UEF,4,,1h30,
+L3S6-MEP,Métré et Estimation des Prix,L3,Génie Civil,UEM,2,,1h30,
+L3S6-ODC,Organisation des chantiers,L3,Génie Civil,UED,1,,1h30,
+L3S6-PFC,Projet de Fin de Cycle,L3,Génie Civil,UEM,4,,2h30,
+L3S6-VRD,Voiries et Réseaux Divers,L3,Génie Civil,UED,1,,1h30,
+IST.2.2,Algèbre 2,Ingénieur_1,Génie Civil,UEF,4,2.0,3h00,40%/60%
+IST.2.1,Analyse 2,Ingénieur_1,Génie Civil,UEF,6,3.0,4h30,40%/60%
+IST.2.5,Dessin technique,Ingénieur_1,Génie Civil,UEM,2,2.0,3h00,100%
+IST.2.7,Logiciel libres et open sources,Ingénieur_1,Génie Civil,UET,1,1.0,3h00,40%/60%
+IST.2.6,Initiation à la Programmation,Ingénieur_1,Génie Civil,UEM,2,2.0,3h00,100%
+IST.2.4,Thermodynamique,Ingénieur_1,Génie Civil,UEF,7,4.0,6h00,40%/60%
+IST.2.3,Électricité et Magnétisme (Physique 2),Ingénieur_1,Génie Civil,UEF,7,4.0,6h00,40%/60%
+IGC4.2,Béton Armé 1,Ingénieur_2,Génie Civil,UEF,6,3.0,4h30,40%/60%
+IGC4.6,Charpente Métallique 1,Ingénieur_2,Génie Civil,UEF,4,2.0,3h00,40%/60%
+IGC4.8,Dessin assisté par ordinateur,Ingénieur_2,Génie Civil,UEM,1,1.0,1h30,100%
+IGC4.5,Hydraulique Générale,Ingénieur_2,Génie Civil,UEF,2,1.0,1h30,100%
+IGC4.1,Mécanique des sols 1,Ingénieur_2,Génie Civil,UEF,5,3.0,4h30,40%/60%
+IGC4.7,Méthodes numériques,Ingénieur_2,Génie Civil,UEM,2,2.0,3h00,40%/60%
+IGC4.9,Normes et Réglementation,Ingénieur_2,Génie Civil,UED,1,1.0,1h30,100%
+IGC4.3,Résistance des matériaux 2,Ingénieur_2,Génie Civil,UEF,5,3.0,4h30,40%/60%
+IGC4.10,Techniques d’expression et de communication,Ingénieur_2,Génie Civil,UET,1,1.0,1h30,100%
+IGC4.4,Topographie 1,Ingénieur_2,Génie Civil,UEF,3,2.0,3h00,40%/60%
+SEG6.7,Calcul Assisté par Ordinateur,Ingénieur_3,Structures,UEM,2,1.0,3h00,100%
+SEG6.2,Charpente Métallique 3,Ingénieur_3,Structures,UEF,6,3.0,4h30,40%/60%
+SEG6.5,Dessin Assisté par Ordinateur 3,Ingénieur_3,Structures,UEM,2,2.0,3h00,100%
+SEG6.10,Entrepreneuriat et start-up,Ingénieur_3,Structures,UET,1,1.0,1h30,100%
+SEG6.1,Mécanique des sols 3,Ingénieur_3,Structures,UEF,5,3.0,4h30,40%/60%
+SEG6.8,Organisation des chantiers,Ingénieur_3,Structures,UEM,3,2.0,3h00,40%/60%
+SEG6.9,Projet Béton Armé,Ingénieur_3,Structures,UEM,4,3.0,4h30,60%/40%
+SEG6.6,Stage dans un milieu industriel 1,Ingénieur_3,Structures,UEM,1,1.0,–,–
+SEG6.4,Transfert Thermique,Ingénieur_3,Structures,UEF,2,1.0,1h30,100%
+SEG6.3,Voieries et Réseaux Divers,Ingénieur_3,Structures,UEF,4,2.0,3h00,40%/60%
+M1RIB.2.9,Communication Interne,M1,RIB,UED,1,1.0,1h30,40%/60%
+M1RIB.2.3,Génie Parasismique,M1,RIB,UEF,4,2.0,3h00,40%/60%
+M1RIB.2.6,Mini projet tutoré 2,M1,RIB,UEM,2,1.0,1h30,100%
+M1RIB.2.2,Normes et Réglementations,M1,RIB,UEF,2,1.0,1h30,40%/60%
+M1RIB.2.4,Plasticité et Endommagement,M1,RIB,UEF,4,2.0,3h00,40%/60%
+M1RIB.2.7,Projet Ouvrage B.A.,M1,RIB,UEM,5,2.0,3h00,100%
+M1RIB.2.11,Respect des normes et intégrité,M1,RIB,UET,1,1.0,1h30,100%
+M1RIB.2.1,Techniques de Diagnostic des bâtiments,M1,RIB,UEF,4,2.0,3h00,40%/60%
+M1RIB.2.8,Thermique du bâtiment,M1,RIB,UED,1,1.0,1h30,100%
+M1RIB.2.5,Transfert dans les milieux poreux,M1,RIB,UEM,4,2.0,3h00,40%/60%
+M1RIB.2.10,Éléments d’IA appliquée,M1,RIB,UET,2,2.0,3h00,40%/60%
+M1STR.2.2,Dynamique des structures 2,M1,Structures,UEF,5,2.0,3h00,40%/60%
+M1STR.2.4,Fondations et soutènements,M1,Structures,UEF,4,2.0,3h00,40%/60%
+M1STR.2.5,Méthodes des éléments finis,M1,Structures,UEM,5,3.0,4h30,40%/60%
+M1STR.2.6,Projet Constructions Métalliques,M1,Structures,UEM,3,2.0,3h00,70%/30%
+M1STR.2.7,Respect des normes et intégrité,M1,Structures,UET,1,1.0,1h30,100%
+M1STR.2.3,Structures en béton armé 2,M1,Structures,UEF,4,2.0,3h00,40%/60%
+M1STR.2.1,Élasticité,M1,Structures,UEF,6,3.0,4h30,40%/60%
+M1STR.2.8,Éléments d’IA appliquée,M1,Structures,UET,2,2.0,3h00,40%/60%
+M1VOA.2.3,Béton Précontraint,M1,VOA,UEF,5,3.0,4h30,40%/60%
+M1VOA.2.4,Constructions Métalliques,M1,VOA,UEF,4,2.0,3h00,40%/60%
+M1VOA.2.2,Dimensionnement des Ponts 2,M1,VOA,UEF,4,2.0,3h00,40%/60%
+M1VOA.2.5,Méthodes des éléments finis,M1,VOA,UEM,4,2.0,3h00,40%/60%
+M1VOA.2.6,Projet Routes,M1,VOA,UEM,4,2.0,3h00,40%/60%
+M1VOA.2.8,Respect des normes et règles d’éthique,M1,VOA,UED,1,1.0,1h30,100%
+M1VOA.2.7,TP Systèmes d’Information Géographique (SIG),M1,VOA,UEM,2,1.0,3h00,100%
+M1VOA.2.1,Théorie de la Plasticité,M1,VOA,UEF,4,2.0,3h00,40%/60%
+M1VOA.2.9,Éléments d’IA appliquée,M1,VOA,UET,2,2.0,3h00,40%/60%
