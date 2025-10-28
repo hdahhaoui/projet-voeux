@@ -145,7 +145,7 @@ def page_enseignant():
 
     work = catalogue.copy()
     work["Choisir"] = False
-    work["Priorité"] = ""
+    work["Priorité"] = "None"
 
     liste_priorites = [
         "🌟 Fortement souhaité",
@@ -166,6 +166,13 @@ def page_enseignant():
         },
     )
 
+    st.caption(
+        "💡 Conseils d'utilisation : privilégiez un ordinateur plutôt qu'un smartphone pour saisir vos vœux, "
+        "double-cliquez sur "
+        "'None' dans la colonne Priorité pour attribuer un niveau à chaque matière sélectionnée et pensez à "
+        "faire défiler le tableau vers le bas pour consulter l'ensemble des matières disponibles."
+    )
+
     remarque = st.text_area("📝 Recommandations / Remarques / Préférences EDT",
                             placeholder="Ex. : éviter lundi matin ; éviter 15h30-17h00 …", height=120)
 
@@ -184,7 +191,7 @@ def page_enseignant():
     if manquants_track:
         erreurs.append("Parcours sans choix : " + ", ".join([f"**{t}**" for t in manquants_track]) + " (min. 1 par parcours).")
 
-    if not chosen.empty and (chosen["Priorité"] == "").any():
+    if not chosen.empty and chosen["Priorité"].isin(["", "None"]).any():
         erreurs.append("Choisissez une **priorité** dans la liste déroulante pour chaque matière sélectionnée.")
 
     if st.button("💾 Enregistrer mes choix", type="primary"):
