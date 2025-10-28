@@ -96,7 +96,7 @@ def page_enseignant():
                 <li>Merci de sélectionner au minimum une matière pour <strong>chaque niveau</strong> : Ing1, Ing2, Ing3, L2, L3 ainsi que pour <strong>toutes les spécialités du M1</strong>.</li>
                 <li>Pour que chaque choix soit validé, veillez à indiquer sa <strong>priorité</strong> (Fortement souhaité, Souhaité, Je prends le défi, Disponible si besoin.).</li>
                 <li>Vous pouvez proposer <strong>autant de matières que vous le jugez pertinent</strong>; n'hésitez pas à constituer une liste riche et variée.</li>
-                <li>Le département s'engage à respecter vos vœux, en particulier les matières « Très souhaitées » et « Souhaitées ». Toutefois, en cas de nécessité, une autre matière pourra être attribuée : pensez à renseigner un maximum de choix sous la priorité « Disponible si besoin ».</li>
+                <li>Le département s'engage à respecter vos vœux, en particulier les matières « Très souhaitées » et « Souhaitées ». Toutefois, en cas de nécessité, une autre matière pourra être attribuée.</li>
                 <li>Passé un délai de <strong>15 jours</strong> sans soumission, le département se réserve la possibilité d'attribuer des matières pour assurer le bon fonctionnement pédagogique.</li>
             </ul>
             <p style="margin-bottom:0;text-align:right;font-weight:600;">Dr. Taleb Omar<br/>Chef de département</p>
@@ -168,8 +168,7 @@ def page_enseignant():
 
     st.caption(
         "💡 Conseils d'utilisation : privilégiez un ordinateur plutôt qu'un smartphone pour saisir vos vœux, "
-        "double-cliquez sur "
-        "'None' dans la colonne Priorité pour attribuer un niveau à chaque matière sélectionnée et pensez à "
+        "double-cliquez sur la case  de la colonne Priorité pour indiquer votre position vis-a-vis chaque matière sélectionnée "
         "faire défiler le tableau vers le bas pour consulter l'ensemble des matières disponibles."
     )
 
