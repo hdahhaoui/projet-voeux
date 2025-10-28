@@ -87,6 +87,24 @@ def page_enseignant():
         st.warning("⚠️ Le fichier 'data/matieres_all.csv' est introuvable ou vide.")
         return
 
+    # Message d'instructions
+    st.markdown(
+        """
+        <div style="padding:18px;border-radius:12px;background:linear-gradient(135deg,#eef2ff,#e0f2fe);color:#0f172a;">
+            <h3 style="margin-top:0;">🌟 Informations importantes pour la formulation de vos vœux</h3>
+            <ul style="line-height:1.6;">
+                <li>Merci de sélectionner au minimum une matière pour <strong>chaque niveau</strong> : Ing1, Ing2, Ing3, L2, L3 ainsi que pour <strong>toutes les spécialités du M1</strong>.</li>
+                <li>Pour que chaque choix soit validé, veillez à indiquer sa <strong>priorité</strong> (Fortement souhaité, Souhaité, Je prends le défi, Disponible si besoin, etc.).</li>
+                <li>Vous pouvez proposer <strong>autant de matières que vous le jugez pertinent</strong>; n'hésitez pas à constituer une liste riche et variée.</li>
+                <li>Le département s'engage à respecter vos vœux, en particulier les matières « Très souhaitées » et « Souhaitées ». Toutefois, en cas de nécessité, une matière non sélectionnée pourra être attribuée : pensez à renseigner un maximum d'unités sous la priorité « Disponible si besoin ».</li>
+                <li>Passé un délai de <strong>15 jours</strong> sans soumission, le département se réserve la possibilité d'attribuer des matières pour assurer le bon fonctionnement pédagogique.</li>
+            </ul>
+            <p style="margin-bottom:0;text-align:right;font-weight:600;">Dr. Taleb Omar<br/>Chef de département</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # Niveaux & parcours obligatoires
     st.subheader("🎚️ Filtres d'affichage")
 
@@ -120,9 +138,6 @@ def page_enseignant():
     if catalogue.empty:
         st.info("Aucune matière trouvée avec ces critères.")
         return
-
-    st.subheader(f"📚 Catalogue filtré ({len(catalogue)})")
-    st.dataframe(catalogue, use_container_width=True, hide_index=True)
 
     # Sélections & priorités (qualitatives)
     st.markdown("---")
