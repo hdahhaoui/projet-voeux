@@ -96,7 +96,7 @@ def page_enseignant():
                 <li>Merci de sélectionner au minimum une matière pour <strong>chaque niveau</strong> : Ing1, Ing2, Ing3, L2, L3 ainsi que pour <strong>toutes les spécialités du M1</strong>.</li>
                 <li>Pour que chaque choix soit validé, veillez à indiquer sa <strong>priorité</strong> (Fortement souhaité, Souhaité, Je prends le défi, Disponible si besoin).</li>
                 <li>Vous pouvez proposer <strong>autant de matières que vous le jugez pertinent</strong> ; n'hésitez pas à constituer une liste riche et variée.</li>
-                <li>Le département s'engage à respecter vos vœux, en particulier les matières <strong>« Très souhaitées »</strong> et <strong>« Souhaitées »</strong>. Toutefois, en cas de nécessité, une autre matière pourra être attribuée.</li>
+                <li>Le département mettra tout en œuvre pour satisfaire vos vœux, en privilégiant autant que possible les matières <strong>« Très souhaitées »</strong> et <strong>« Souhaitées »</strong>. Cependant, d’autres matières pourront être attribuées en fonction des besoins pédagogiques.</li>
                 <li>Passé un délai de <strong>15 jours</strong> sans soumission, le département se réserve la possibilité d'attribuer des matières pour assurer le bon fonctionnement pédagogique.</li>
             </ul>
             <p style="margin-bottom:0;text-align:right;font-weight:600;">Dr. Taleb Omar<br/>Chef de département</p>
