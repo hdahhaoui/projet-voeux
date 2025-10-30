@@ -3,4 +3,5 @@ pandas
 python-dotenv
 XlsxWriter
 gspread
+gspread-dataframe
 google-auth
