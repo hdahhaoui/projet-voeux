@@ -1,4 +1,11 @@
 # app.py — Plateforme de vœux enseignants (Département GC)
+# Version avec persistance Google Sheets + repli local
+# -----------------------------------------------------
+# Secrets attendus (facultatif si tu gardes le stockage local) :
+#   GSHEET_ID = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+#   gcp_service_account = { ... JSON complet du compte de service ... }
+#
+# Dépendances nouvelles : gspread, google-auth
 
 import os
 from io import BytesIO
@@ -7,40 +14,105 @@ import zipfile
 import pandas as pd
 import streamlit as st
 
+# --- Google Sheets (optionnel)
+def _has_gsheets():
+    try:
+        return bool(st.secrets.get("GSHEET_ID")) and bool(st.secrets.get("gcp_service_account"))
+    except Exception:
+        return False
+
+def _gsheets_client():
+    import gspread
+    from google.oauth2 import service_account
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    creds = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"], scopes=scopes
+    )
+    return gspread.authorize(creds)
+
+def _open_worksheet(sheet_name: str):
+    """Ouvre (ou crée) l’onglet demandé et garantit l’en-tête."""
+    gc = _gsheets_client()
+    sh = gc.open_by_key(st.secrets["GSHEET_ID"])
+    try:
+        ws = sh.worksheet(sheet_name)
+    except Exception:
+        ws = sh.add_worksheet(title=sheet_name, rows=2000, cols=20)
+    return ws
+
+def _ensure_headers(ws, headers):
+    current = ws.row_values(1)
+    if current != headers:
+        ws.resize(rows=max(ws.row_count, 2))
+        ws.update("A1", [headers])
+
+# -----------------------------------------------------
 
 st.set_page_config(page_title="Choix des matières - Département Génie Civil",
                    page_icon="🏗️", layout="wide")
 
 DATA_DIR = os.getenv("DATA_PATH", "data")
 MATIERES_FILE = os.path.join(DATA_DIR, "matieres_all.csv")
-SOUMISSIONS_FILE = os.path.join(DATA_DIR, "soumissions.csv")
+SOUMISSIONS_FILE = os.path.join(DATA_DIR, "soumissions.csv")  # repli local
 ADMIN_PASS = os.getenv("ADMIN_PASS", "gc2025s2")  # mot de passe par défaut
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-
+# -------------------
+# Chargement matières
+# -------------------
 @st.cache_data
 def load_matieres():
     if os.path.exists(MATIERES_FILE):
         return pd.read_csv(MATIERES_FILE).fillna("")
-    return pd.DataFrame(columns=["course_code","course_title","level_code","track_code","ec_type"])
+    return pd.DataFrame(columns=["course_code", "course_title", "level_code", "track_code", "ec_type"])
+
+# ---------------------
+# Soumissions (persist)
+# ---------------------
+SOUMS_HEADERS = [
+    "nom", "prenom", "email",
+    "niveau", "parcours", "matiere",
+    "priorite", "remarques", "date_soumission"
+]
 
 def load_soumissions():
+    """Charge depuis Google Sheets si dispo, sinon depuis le CSV local."""
+    if _has_gsheets():
+        ws = _open_worksheet("soumissions")
+        _ensure_headers(ws, SOUMS_HEADERS)
+        records = ws.get_all_records()
+        if not records:
+            return pd.DataFrame(columns=SOUMS_HEADERS)
+        return pd.DataFrame(records).fillna("")
+    # repli local
     if os.path.exists(SOUMISSIONS_FILE):
         return pd.read_csv(SOUMISSIONS_FILE).fillna("")
-    cols = ["nom","prenom","email","niveau","parcours","matiere","priorite","remarques","date_soumission"]
-    return pd.DataFrame(columns=cols)
+    return pd.DataFrame(columns=SOUMS_HEADERS)
 
 def save_soumissions(df_new: pd.DataFrame):
-    if os.path.exists(SOUMISSIONS_FILE):
-        old = pd.read_csv(SOUMISSIONS_FILE)
-        final = pd.concat([old, df_new], ignore_index=True)
+    """Append dans Google Sheets si dispo, sinon ajoute au CSV local."""
+    if _has_gsheets():
+        ws = _open_worksheet("soumissions")
+        _ensure_headers(ws, SOUMS_HEADERS)
+        rows = df_new[SOUMS_HEADERS].astype(str).values.tolist()
+        ws.append_rows(rows, value_input_option="USER_ENTERED")
     else:
-        final = df_new
-    final.to_csv(SOUMISSIONS_FILE, index=False)
+        if os.path.exists(SOUMISSIONS_FILE):
+            old = pd.read_csv(SOUMISSIONS_FILE)
+            final = pd.concat([old, df_new], ignore_index=True)
+        else:
+            final = df_new
+        final.to_csv(SOUMISSIONS_FILE, index=False)
 
+# -------------
+# Export helpers
+# -------------
 def to_excel_bytes(**sheets):
-    """Excel via XlsxWriter; ImportError si moteur indisponible."""
+    """Excel via XlsxWriter; bascule en ZIP de CSV si moteur indisponible."""
     try:
         import xlsxwriter  # noqa: F401
         bio = BytesIO()
@@ -60,14 +132,17 @@ def zip_csv_bytes(**sheets):
     bio.seek(0)
     return bio
 
-
+# -------------------
+# Données initiales
+# -------------------
 matieres_df = load_matieres()
-
 
 st.sidebar.header("Navigation")
 mode = st.sidebar.radio("Mode", ["Enseignant", "Admin"])
 
-
+# -------------------
+# Page Enseignant
+# -------------------
 def page_enseignant():
     st.title("🎓 Plateforme de choix des matières")
     st.caption("Département de Génie Civil")
@@ -108,32 +183,46 @@ def page_enseignant():
     # Niveaux & parcours obligatoires
     st.subheader("🎚️ Filtres d'affichage")
 
-    ORDRE_NIVEAUX = ["Ingénieur_1","Ingénieur_2","Ingénieur_3","L2","L3","M1","M2"]
+    ORDRE_NIVEAUX = ["Ingénieur_1", "Ingénieur_2", "Ingénieur_3", "L2", "L3", "M1", "M2"]
     presents = matieres_df["level_code"].dropna().unique().tolist()
     niveaux_obligatoires = [n for n in ORDRE_NIVEAUX if n in presents] + [n for n in presents if n not in ORDRE_NIVEAUX]
     niveaux_sel = niveaux_obligatoires[:]
 
     st.markdown("**📘 Niveaux obligatoires (≥ 1 matière par niveau)**")
-    st.markdown(" ".join([f"<span style='background:#eef2ff;padding:4px 10px;border-radius:12px;margin-right:6px;'>{n}</span>"
-                          for n in niveaux_sel]), unsafe_allow_html=True)
+    st.markdown(
+        " ".join(
+            [
+                f"<span style='background:#eef2ff;padding:4px 10px;border-radius:12px;margin-right:6px;'>{n}</span>"
+                for n in niveaux_sel
+            ]
+        ),
+        unsafe_allow_html=True,
+    )
 
-    ORDER_TRACKS = ["Génie Civil","Structures","VOA","RIB"]
+    ORDER_TRACKS = ["Génie Civil", "Structures", "VOA", "RIB"]
     present_tracks = matieres_df[matieres_df["level_code"].isin(niveaux_sel)]["track_code"].dropna().unique().tolist()
     parcours_sel = [t for t in ORDER_TRACKS if t in present_tracks] + [t for t in present_tracks if t not in ORDER_TRACKS]
 
     st.markdown("**🎯 Parcours obligatoires (≥ 1 matière par parcours)**")
-    st.markdown(" ".join([f"<span style='background:#fee2e2;padding:4px 10px;border-radius:12px;margin-right:6px;'>{t}</span>"
-                          for t in parcours_sel]), unsafe_allow_html=True)
+    st.markdown(
+        " ".join(
+            [
+                f"<span style='background:#fee2e2;padding:4px 10px;border-radius:12px;margin-right:6px;'>{t}</span>"
+                for t in parcours_sel
+            ]
+        ),
+        unsafe_allow_html=True,
+    )
 
     ec_types_all = sorted(matieres_df["ec_type"].dropna().unique().tolist())
     ec_types_sel = st.multiselect("🧩 Types d'EC (facultatif)", options=ec_types_all, default=ec_types_all)
 
     mask = (
-        matieres_df["level_code"].isin(niveaux_sel) &
-        matieres_df["track_code"].isin(parcours_sel) &
-        matieres_df["ec_type"].isin(ec_types_sel)
+        matieres_df["level_code"].isin(niveaux_sel)
+        & matieres_df["track_code"].isin(parcours_sel)
+        & matieres_df["ec_type"].isin(ec_types_sel)
     )
-    catalogue = matieres_df.loc[mask, ["course_code","course_title","level_code","track_code","ec_type"]].copy()
+    catalogue = matieres_df.loc[mask, ["course_code", "course_title", "level_code", "track_code", "ec_type"]].copy()
 
     if catalogue.empty:
         st.info("Aucune matière trouvée avec ces critères.")
@@ -161,8 +250,11 @@ def page_enseignant():
         num_rows="fixed",
         column_config={
             "Choisir": st.column_config.CheckboxColumn("Choisir"),
-            "Priorité": st.column_config.SelectboxColumn("Priorité", options=liste_priorites,
-                         help="Choisissez votre niveau de préférence pour chaque matière sélectionnée."),
+            "Priorité": st.column_config.SelectboxColumn(
+                "Priorité",
+                options=liste_priorites,
+                help="Choisissez votre niveau de préférence pour chaque matière sélectionnée.",
+            ),
         },
     )
 
@@ -172,11 +264,14 @@ def page_enseignant():
         "faites défiler le tableau pour consulter l'ensemble des matières disponibles."
     )
 
-    remarque = st.text_area("📝 Recommandations / Remarques / Préférences EDT",
-                            placeholder="Ex. : éviter lundi matin ; éviter 15h30-17h00 …", height=120)
+    remarque = st.text_area(
+        "📝 Recommandations / Remarques / Préférences EDT",
+        placeholder="Ex. : éviter lundi matin ; éviter 15h30-17h00 …",
+        height=120,
+    )
 
     MIN_TOTAL = 8
-    chosen = edited[edited["Choisir"] == True].copy()
+    chosen = edited[edited["Choisir"] == True].copy()  # noqa: E712
     erreurs = []
 
     if len(chosen) < MIN_TOTAL:
@@ -188,7 +283,9 @@ def page_enseignant():
 
     manquants_track = [t for t in parcours_sel if t not in chosen["track_code"].unique()]
     if manquants_track:
-        erreurs.append("Parcours sans choix : " + ", ".join([f"**{t}**" for t in manquants_track]) + " (min. 1 par parcours).")
+        erreurs.append(
+            "Parcours sans choix : " + ", ".join([f"**{t}**" for t in manquants_track]) + " (min. 1 par parcours)."
+        )
 
     if not chosen.empty and chosen["Priorité"].isin(["", "None"]).any():
         erreurs.append("Choisissez une **priorité** dans la liste déroulante pour chaque matière sélectionnée.")
@@ -204,31 +301,37 @@ def page_enseignant():
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         lignes = []
         # tri : on garde l'ordre de la liste_priorites
-        cat_order = {v:i for i, v in enumerate(liste_priorites)}
+        cat_order = {v: i for i, v in enumerate(liste_priorites)}
         chosen = chosen.sort_values("Priorité", key=lambda s: s.map(cat_order))
 
         for _, r in chosen.iterrows():
-            lignes.append({
-                "nom": nom,
-                "prenom": prenom,
-                "email": email,
-                "niveau": r["level_code"],
-                "parcours": r["track_code"],
-                "matiere": r["course_title"],
-                "priorite": r["Priorité"],
-                "remarques": remarque,
-                "date_soumission": now,
-            })
+            lignes.append(
+                {
+                    "nom": nom,
+                    "prenom": prenom,
+                    "email": email,
+                    "niveau": r["level_code"],
+                    "parcours": r["track_code"],
+                    "matiere": r["course_title"],
+                    "priorite": r["Priorité"],
+                    "remarques": remarque,
+                    "date_soumission": now,
+                }
+            )
         df_new = pd.DataFrame(lignes)
         save_soumissions(df_new)
 
         st.success("✅ Vos choix ont été enregistrés.")
-        st.download_button("📥 Télécharger mon récapitulatif (CSV)",
-                           data=df_new.to_csv(index=False).encode("utf-8"),
-                           file_name=f"choix_{nom}_{prenom}.csv",
-                           mime="text/csv")
+        st.download_button(
+            "📥 Télécharger mon récapitulatif (CSV)",
+            data=df_new.to_csv(index=False).encode("utf-8"),
+            file_name=f"choix_{nom}_{prenom}.csv",
+            mime="text/csv",
+        )
 
-
+# -------------------
+# Page Admin
+# -------------------
 def page_admin():
     st.title("🛠️ Administration – Vœux enseignants")
 
@@ -253,45 +356,71 @@ def page_admin():
         sel_prof = st.multiselect("Enseignants", sorted(enseignants_list.unique().tolist()))
 
     filtered = df.copy()
-    if sel_niv: filtered = filtered[filtered["niveau"].isin(sel_niv)]
-    if sel_par: filtered = filtered[filtered["parcours"].isin(sel_par)]
+    if sel_niv:
+        filtered = filtered[filtered["niveau"].isin(sel_niv)]
+    if sel_par:
+        filtered = filtered[filtered["parcours"].isin(sel_par)]
     if sel_prof:
         full = (filtered["nom"].fillna("") + " " + filtered["prenom"].fillna("")).str.strip().isin(sel_prof)
         filtered = filtered[full]
 
     st.subheader(f"📋 Soumissions ({len(filtered)})")
-    st.dataframe(filtered.sort_values(["date_soumission","priorite"], ascending=[False, True]),
-                 use_container_width=True, hide_index=True)
+    st.dataframe(
+        filtered.sort_values(["date_soumission", "priorite"], ascending=[False, True]),
+        use_container_width=True,
+        hide_index=True,
+    )
 
     st.subheader("📊 Synthèses")
     cA, cB, cC = st.columns(3)
     with cA:
         agg_niv = filtered.groupby("niveau").size().reset_index(name="nb_voeux")
-        st.caption("Par niveau"); st.dataframe(agg_niv, use_container_width=True, hide_index=True)
+        st.caption("Par niveau")
+        st.dataframe(agg_niv, use_container_width=True, hide_index=True)
     with cB:
-        agg_mat = filtered.groupby("matiere").size().reset_index(name="nb_voeux").sort_values("nb_voeux", ascending=False)
-        st.caption("Top matières"); st.dataframe(agg_mat, use_container_width=True, hide_index=True)
+        agg_mat = (
+            filtered.groupby("matiere")
+            .size()
+            .reset_index(name="nb_voeux")
+            .sort_values("nb_voeux", ascending=False)
+        )
+        st.caption("Top matières")
+        st.dataframe(agg_mat, use_container_width=True, hide_index=True)
     with cC:
-        agg_prof = filtered.assign(enseignant=(filtered["nom"].fillna("") + " " + filtered["prenom"].fillna("")).str.strip()) \
-                           .groupby("enseignant").size().reset_index(name="nb_voeux") \
-                           .sort_values("nb_voeux", ascending=False)
-        st.caption("Par enseignant"); st.dataframe(agg_prof, use_container_width=True, hide_index=True)
+        agg_prof = (
+            filtered.assign(
+                enseignant=(filtered["nom"].fillna("") + " " + filtered["prenom"].fillna("")).str.strip()
+            )
+            .groupby("enseignant")
+            .size()
+            .reset_index(name="nb_voeux")
+            .sort_values("nb_voeux", ascending=False)
+        )
+        st.caption("Par enseignant")
+        st.dataframe(agg_prof, use_container_width=True, hide_index=True)
 
     # Export
     sheets = dict(
-        Soumissions=filtered.sort_values(["date_soumission","priorite"], ascending=[False, True]),
+        Soumissions=filtered.sort_values(["date_soumission", "priorite"], ascending=[False, True]),
         Par_niveau=agg_niv,
         Top_matieres=agg_mat,
     )
     try:
         xls = to_excel_bytes(**sheets)
-        st.download_button("⬇️ Export Excel (toutes vues)", xls.getvalue(),
-                           file_name="voeux_admin_export.xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button(
+            "⬇️ Export Excel (toutes vues)",
+            xls.getvalue(),
+            file_name="voeux_admin_export.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
     except ImportError:
         zipbuf = zip_csv_bytes(**sheets)
-        st.download_button("⬇️ Export (ZIP de CSV – moteur Excel absent)", zipbuf.getvalue(),
-                           file_name="voeux_admin_export.zip", mime="application/zip")
+        st.download_button(
+            "⬇️ Export (ZIP de CSV – moteur Excel absent)",
+            zipbuf.getvalue(),
+            file_name="voeux_admin_export.zip",
+            mime="application/zip",
+        )
 
 # =======================
 # ROUTER
@@ -300,4 +429,3 @@ if mode == "Enseignant":
     page_enseignant()
 else:
     page_admin()
-
