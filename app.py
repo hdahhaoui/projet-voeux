@@ -1,11 +1,7 @@
 # app.py — Plateforme de vœux enseignants (Département GC)
 # Version avec persistance Google Sheets + repli local
+# + Anti-doublons Nom+Prénom (empêche un second envoi)
 # -----------------------------------------------------
-# Secrets attendus (facultatif si tu gardes le stockage local) :
-#   GSHEET_ID = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-#   gcp_service_account = { ... JSON complet du compte de service ... }
-#
-# Dépendances nouvelles : gspread, google-auth
 
 import os
 from io import BytesIO
@@ -34,7 +30,6 @@ def _gsheets_client():
     return gspread.authorize(creds)
 
 def _open_worksheet(sheet_name: str):
-    """Ouvre (ou crée) l’onglet demandé et garantit l’en-tête."""
     gc = _gsheets_client()
     sh = gc.open_by_key(st.secrets["GSHEET_ID"])
     try:
@@ -49,15 +44,13 @@ def _ensure_headers(ws, headers):
         ws.resize(rows=max(ws.row_count, 2))
         ws.update("A1", [headers])
 
-# -----------------------------------------------------
-
 st.set_page_config(page_title="Choix des matières - Département Génie Civil",
                    page_icon="🏗️", layout="wide")
 
 DATA_DIR = os.getenv("DATA_PATH", "data")
 MATIERES_FILE = os.path.join(DATA_DIR, "matieres_all.csv")
 SOUMISSIONS_FILE = os.path.join(DATA_DIR, "soumissions.csv")  # repli local
-ADMIN_PASS = os.getenv("ADMIN_PASS", "gc2025s2")  # mot de passe par défaut
+ADMIN_PASS = os.getenv("ADMIN_PASS", "gc2025s2")  # mot de passe admin
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -109,10 +102,37 @@ def save_soumissions(df_new: pd.DataFrame):
         final.to_csv(SOUMISSIONS_FILE, index=False)
 
 # -------------
+# Anti-doublons
+# -------------
+def _norm(s):
+    return str(s).strip().lower()
+
+def already_submitted(nom: str, prenom: str):
+    """
+    Retourne (True, date_derniere_soumission) si Nom+Prénom existent déjà,
+    sinon (False, None).
+    """
+    if not nom or not prenom:
+        return False, None
+    df = load_soumissions()
+    if df.empty:
+        return False, None
+    mask = (df["nom"].astype(str).str.strip().str.lower() == _norm(nom)) & \
+           (df["prenom"].astype(str).str.strip().str.lower() == _norm(prenom))
+    if mask.any():
+        # on renvoie la date la plus récente parmi les enregistrements trouvés
+        try:
+            last_date = pd.to_datetime(df.loc[mask, "date_soumission"]).max()
+            last_date = last_date.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            last_date = str(df.loc[mask, "date_soumission"].iloc[-1])
+        return True, last_date
+    return False, None
+
+# -------------
 # Export helpers
 # -------------
 def to_excel_bytes(**sheets):
-    """Excel via XlsxWriter; bascule en ZIP de CSV si moteur indisponible."""
     try:
         import xlsxwriter  # noqa: F401
         bio = BytesIO()
@@ -162,7 +182,7 @@ def page_enseignant():
         st.warning("⚠️ Le fichier 'data/matieres_all.csv' est introuvable ou vide.")
         return
 
-    # Message d'instructions
+    # (bloc d'infos : inchangé)
     st.markdown(
         """
         <div style="padding:18px;border-radius:12px;background:linear-gradient(135deg,#eef2ff,#e0f2fe);color:#0f172a;">
@@ -180,7 +200,7 @@ def page_enseignant():
         unsafe_allow_html=True,
     )
 
-    # Niveaux & parcours obligatoires
+    # Filtres d'affichage (inchangé)
     st.subheader("🎚️ Filtres d'affichage")
 
     ORDRE_NIVEAUX = ["Ingénieur_1", "Ingénieur_2", "Ingénieur_3", "L2", "L3", "M1", "M2"]
@@ -228,7 +248,7 @@ def page_enseignant():
         st.info("Aucune matière trouvée avec ces critères.")
         return
 
-    # Sélections & priorités (qualitatives)
+    # Sélections & priorités (inchangé)
     st.markdown("---")
     st.subheader("✅ Sélection & priorités")
 
@@ -290,17 +310,40 @@ def page_enseignant():
     if not chosen.empty and chosen["Priorité"].isin(["", "None"]).any():
         erreurs.append("Choisissez une **priorité** dans la liste déroulante pour chaque matière sélectionnée.")
 
-    if st.button("💾 Enregistrer mes choix", type="primary"):
+    # ---- Anti-doublons : détection immédiate et désactivation du bouton
+    submitted_already = False
+    last_when = None
+    if nom.strip() and prenom.strip():
+        submitted_already, last_when = already_submitted(nom, prenom)
+        if submitted_already:
+            st.warning(
+                f"ℹ️ Une soumission au nom de **{nom} {prenom}** existe déjà "
+                f"(dernier envoi : **{last_when}**). Pour modifier vos vœux, "
+                f"merci de contacter l'administration."
+            )
+
+    # Bouton enregistrer (désactivé si doublon détecté)
+    save_disabled = submitted_already
+    if st.button("💾 Enregistrer mes choix", type="primary", disabled=save_disabled):
+        # Double sécurité côté serveur
         if not nom.strip() or not prenom.strip():
             st.error("Veuillez renseigner votre nom et votre prénom.")
             return
+
+        again, when_again = already_submitted(nom, prenom)
+        if again:
+            st.error(
+                f"Soumission refusée : **{nom} {prenom}** a déjà déposé ses vœux "
+                f"(dernier envoi : {when_again})."
+            )
+            return
+
         if erreurs:
             st.error("⚠️ Corrigez :\n- " + "\n- ".join(erreurs))
             return
 
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         lignes = []
-        # tri : on garde l'ordre de la liste_priorites
         cat_order = {v: i for i, v in enumerate(liste_priorites)}
         chosen = chosen.sort_values("Priorité", key=lambda s: s.map(cat_order))
 
@@ -399,7 +442,6 @@ def page_admin():
         st.caption("Par enseignant")
         st.dataframe(agg_prof, use_container_width=True, hide_index=True)
 
-    # Export
     sheets = dict(
         Soumissions=filtered.sort_values(["date_soumission", "priorite"], ascending=[False, True]),
         Par_niveau=agg_niv,
